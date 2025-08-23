@@ -1,10 +1,11 @@
 package user
 
 import (
-	"log"
+	"callcenter/internal/db"
 	"encoding/json"
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
 )
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -14,16 +15,41 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var newUser User
-	err := json.NewDecoder(r.Body).Decode(&newUser)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	// Here you would typically add the user to the database.
-	log.Printf("Registered new user: %s", newUser.Username)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Error hashing password", http.StatusInternalServerError)
+		return
+	}
+
+	database, err := db.Connect()
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+	defer database.Close()
+
+	var exists bool
+	err = database.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username=$1)", newUser.Username).Scan(&exists)
+	if err != nil {
+		http.Error(w, "Error checking user existence", http.StatusInternalServerError)
+		return
+	}
+
+	if exists {
+		http.Error(w, "User already exists", http.StatusConflict)
+		return
+	}
+
+	if err := InsertUser(database, newUser.Username, string(hashedPassword)); err != nil {
+		http.Error(w, "Error saving user", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
-	
+	w.Write([]byte("User registered successfully!\n"))
 }
