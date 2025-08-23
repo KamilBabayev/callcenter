@@ -2,6 +2,7 @@ package user
 
 import (
 	"callcenter/internal/db"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -52,4 +53,42 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User registered successfully!\n"))
+}
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var creds User
+	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	database, err := db.Connect()
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+	defer database.Close()
+
+	var storedHashedPassword string
+	err = database.QueryRow("SELECT password FROM users WHERE username=$1", creds.Username).Scan(&storedHashedPassword)
+	if err == sql.ErrNoRows {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "Error fetching user", http.StatusInternalServerError)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(storedHashedPassword), []byte(creds.Password)); err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Login successful!\n"))
 }
