@@ -1,11 +1,14 @@
 package user
 
 import (
+	"callcenter/internal/auth"
 	"callcenter/internal/db"
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -61,8 +64,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var creds User
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+	var loginUser User
+	if err := json.NewDecoder(r.Body).Decode(&loginUser); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -75,20 +78,32 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer database.Close()
 
 	var storedHashedPassword string
-	err = database.QueryRow("SELECT password FROM users WHERE username=$1", creds.Username).Scan(&storedHashedPassword)
+	err = database.QueryRow("SELECT password FROM users WHERE username=$1", loginUser.Username).Scan(&storedHashedPassword)
 	if err == sql.ErrNoRows {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	} else if err != nil {
-		http.Error(w, "Error fetching user", http.StatusInternalServerError)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(storedHashedPassword), []byte(creds.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+	err = bcrypt.CompareHashAndPassword([]byte(storedHashedPassword), []byte(loginUser.Password))
+	if err != nil {
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Login successful!\n"))
+	// Create JWT token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"username": loginUser.Username,
+		"exp":      time.Now().Add(time.Hour * 72).Unix(),
+	})
+	tokenString, err := token.SignedString(auth.JwtKey)
+	if err != nil {
+		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
