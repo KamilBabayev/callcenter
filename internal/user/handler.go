@@ -29,6 +29,8 @@ func AllowedRolesString() string {
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("RegisterHandler called: %s %s", r.Method, r.URL.Path)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -36,6 +38,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	var newUser User
 	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
+		log.Printf("RegisterHandler error: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -101,6 +104,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("LoginHandler called: %s %s", r.Method, r.URL.Path)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -108,6 +113,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	var loginUser User
 	if err := json.NewDecoder(r.Body).Decode(&loginUser); err != nil {
+		log.Printf("LoginHandler error: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -146,12 +152,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
-	}
-
-	log.Println(userRole)
-	log.Println(storedHashedPassword)
-	log.Println(loginUser.Username)
-	log.Println(loginUser.Password)
+	}	
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})

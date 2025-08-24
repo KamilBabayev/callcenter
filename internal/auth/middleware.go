@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	// "log"
+	"log"
 	"net/http"
 	"strings"
 
@@ -13,6 +13,7 @@ var JwtKey = []byte("your_secret_key")
 
 func JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("JWTMiddleware: %s %s", r.Method, r.URL.Path)
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
