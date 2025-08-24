@@ -68,7 +68,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := CreateUser(database, newUser.Username, string(hashedPassword)); err != nil {
+	role := newUser.Role
+	if role == "" {
+		role = "viewer"
+	}
+	if err := CreateUser(database, newUser.Username, string(hashedPassword), role); err != nil {
 		http.Error(w, "Error saving user", http.StatusInternalServerError)
 		return
 	}

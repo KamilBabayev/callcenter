@@ -43,8 +43,8 @@ func GetCalls(db *sql.DB) ([]Call, error) {
 }
 
 // CreateUser inserts a new user into the database
-func CreateUser(db *sql.DB, username, hashedPassword string) error {
-	_, err := db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, hashedPassword)
+func CreateUser(db *sql.DB, username, hashedPassword, role string) error {
+	_, err := db.Exec("INSERT INTO users (username, password, role) VALUES ($1, $2, $3)", username, hashedPassword, role)
 	return err
 }
 
