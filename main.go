@@ -11,16 +11,20 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/api/register", user.RegisterHandler)
-	http.HandleFunc("/api/login", user.LoginHandler)
-	http.HandleFunc("/api/profile", auth.JWTMiddleware(user.ProfileHandler))
-	http.HandleFunc("/api/agents", auth.JWTMiddleware(user.AgentHandler))
-	http.HandleFunc("/api/calls", auth.JWTMiddleware(user.CallHandler))
-	http.HandleFunc("/api/create-agent", auth.JWTMiddleware(user.CreateAgentHandler))
-	http.HandleFunc("/api/create-call", auth.JWTMiddleware(user.CreateCallHandler))
-	http.HandleFunc("/api/protected", auth.JWTMiddleware(protectedHandler))
-	http.HandleFunc("/api/update-agent-status", auth.JWTMiddleware(auth.RequireRoles([]string{"admin", "agent"}, agent.UpdateStatusHandler)))
-	http.HandleFunc("/api/admin", auth.JWTMiddleware(auth.RequireRoles([]string{"admin"}, admin.AdminHandler)))
+	// Endpoints for admin, agent, and viewer
+	http.HandleFunc("/api/profile", auth.JWTMiddleware(auth.RequireRoles([]string{"admin", "agent", "viewer"}, user.ProfileHandler)))
+	http.HandleFunc("/api/login", user.LoginHandler) // Usually open to all
+	http.HandleFunc("/api/register", user.RegisterHandler) // Usually open to all
+
+	// Endpoints for admin and agent
+	http.HandleFunc("/api/calls", auth.JWTMiddleware(auth.RequireRoles([]string{"admin", "agent"}, user.CallHandler)))
+
+	// Endpoints for admin only
+	http.HandleFunc("/api/agents", auth.JWTMiddleware(auth.RequireRole("admin", user.AgentHandler)))
+	http.HandleFunc("/api/create-agent", auth.JWTMiddleware(auth.RequireRole("admin", user.CreateAgentHandler)))
+	http.HandleFunc("/api/create-call", auth.JWTMiddleware(auth.RequireRole("admin", user.CreateCallHandler)))
+	http.HandleFunc("/api/update-agent-status", auth.JWTMiddleware(auth.RequireRole("admin", agent.UpdateStatusHandler)))
+	http.HandleFunc("/api/admin", auth.JWTMiddleware(auth.RequireRole("admin", admin.AdminHandler)))
 
 	log.Println("callcenter service started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

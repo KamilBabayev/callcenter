@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"log"
+	// "log"
 	"net/http"
 	"strings"
 
@@ -37,23 +37,23 @@ func RequireRoles(roles []string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Context().Value("userToken")
 		if token == nil {
-			log.Println("RequireRoles: No token found in context")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		claims, ok := token.(*jwt.Token).Claims.(jwt.MapClaims)
 		if !ok {
-			log.Println("RequireRoles: Claims type assertion failed")
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 		userRole, ok := claims["role"].(string)
 		if !ok {
-			log.Println("RequireRoles: Role not found in claims", claims)
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
-		log.Printf("RequireRoles: User role from token: %s\n", userRole)
+		if userRole == "admin" {
+			next(w, r)
+			return
+		}
 		for _, role := range roles {
 			if userRole == role {
 				next(w, r)
@@ -61,5 +61,26 @@ func RequireRoles(roles []string, next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 		http.Error(w, "Forbidden", http.StatusForbidden)
+	}
+}
+
+func RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.Context().Value("userToken")
+		if token == nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		claims, ok := token.(*jwt.Token).Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		userRole, ok := claims["role"].(string)
+		if !ok || (userRole != role && userRole != "admin") {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
 	}
 }
