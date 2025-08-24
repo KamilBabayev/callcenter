@@ -107,3 +107,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
+
+func ProfileHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("This is the user profile endpoint\n"))
+}
+
+func CallHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("This is the calls endpoint\n"))
+}
+
+func AgentHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("This is the agents endpoint\n"))
+}

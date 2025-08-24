@@ -11,6 +11,9 @@ import (
 func main() {
 	http.HandleFunc("/register", user.RegisterHandler)
 	http.HandleFunc("/login", user.LoginHandler)
+	http.HandleFunc("/profile", auth.JWTMiddleware(user.ProfileHandler))
+	http.HandleFunc("/agents", auth.JWTMiddleware(user.AgentHandler))
+	http.HandleFunc("/calls", auth.JWTMiddleware(user.CallHandler))
 	http.HandleFunc("/protected", auth.JWTMiddleware(protectedHandler))
 
 	log.Println("callcenter service started on :8080")
