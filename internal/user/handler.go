@@ -25,6 +25,23 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(newUser.Username) == 0 {
+		http.Error(w, "Username can not be empty", http.StatusBadRequest)
+		return
+	}
+	if len(newUser.Username) < 3 {
+		http.Error(w, "Username must be at least 3 characters", http.StatusBadRequest)
+		return
+	}
+	if len(newUser.Password) == 0 {
+		http.Error(w, "Password can not be empty", http.StatusBadRequest)
+		return
+	}
+	if len(newUser.Password) < 6 {
+		http.Error(w, "Password must be at least 6 characters", http.StatusBadRequest)
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "Error hashing password", http.StatusInternalServerError)
@@ -50,7 +67,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := InsertUser(database, newUser.Username, string(hashedPassword)); err != nil {
+	if err := CreateUser(database, newUser.Username, string(hashedPassword)); err != nil {
 		http.Error(w, "Error saving user", http.StatusInternalServerError)
 		return
 	}
@@ -167,21 +184,10 @@ func CallHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer database.Close()
 
-	rows, err := database.Query("SELECT id, caller, agent_id, status, timestamp FROM calls")
+	calls, err := GetCalls(database)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
-	}
-	defer rows.Close()
-
-	var calls []Call
-	for rows.Next() {
-		var call Call
-		if err := rows.Scan(&call.ID, &call.Caller, &call.AgentID, &call.Status, &call.Timestamp); err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-		calls = append(calls, call)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -198,24 +204,91 @@ func AgentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer database.Close()
 
-	rows, err := database.Query("SELECT id, name, status FROM agents")
+	agents, err := GetAgents(database)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
-	}
-	defer rows.Close()
-
-	var agents []Agent
-	for rows.Next() {
-		var agent Agent
-		if err := rows.Scan(&agent.ID, &agent.Name, &agent.Status); err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-		agents = append(agents, agent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(agents)
 
+}
+
+func CreateAgentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var agent Agent
+	if err := json.NewDecoder(r.Body).Decode(&agent); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	if len(agent.Name) < 2 {
+		http.Error(w, "Agent name must be at least 2 characters", http.StatusBadRequest)
+		return
+	}
+	if agent.Status == "" {
+		http.Error(w, "Status is required", http.StatusBadRequest)
+		return
+	}
+
+	database, err := db.Connect()
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+	defer database.Close()
+
+	if err := CreateAgent(database, agent.Name, agent.Status); err != nil {
+		http.Error(w, "Error creating agent", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Agent created successfully!\n"))
+}
+
+func CreateCallHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var call Call
+	if err := json.NewDecoder(r.Body).Decode(&call); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	if len(call.Caller) < 3 {
+		http.Error(w, "Caller must be at least 3 characters", http.StatusBadRequest)
+		return
+	}
+	if call.AgentID <= 0 {
+		http.Error(w, "Valid agent_id is required", http.StatusBadRequest)
+		return
+	}
+	if call.Status == "" {
+		http.Error(w, "Status is required", http.StatusBadRequest)
+		return
+	}
+
+	database, err := db.Connect()
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+	defer database.Close()
+
+	if err := CreateCall(database, call.Caller, call.AgentID, call.Status); err != nil {
+		http.Error(w, "Error creating call", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Call created successfully!\n"))
 }

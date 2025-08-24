@@ -9,12 +9,14 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/register", user.RegisterHandler)
-	http.HandleFunc("/login", user.LoginHandler)
-	http.HandleFunc("/profile", auth.JWTMiddleware(user.ProfileHandler))
-	http.HandleFunc("/agents", auth.JWTMiddleware(user.AgentHandler))
-	http.HandleFunc("/calls", auth.JWTMiddleware(user.CallHandler))
-	http.HandleFunc("/protected", auth.JWTMiddleware(protectedHandler))
+	http.HandleFunc("/api/register", user.RegisterHandler)
+	http.HandleFunc("/api/login", user.LoginHandler)
+	http.HandleFunc("/api/profile", auth.JWTMiddleware(user.ProfileHandler))
+	http.HandleFunc("/api/agents", auth.JWTMiddleware(user.AgentHandler))
+	http.HandleFunc("/api/calls", auth.JWTMiddleware(user.CallHandler))
+	http.HandleFunc("/api/create-agent", auth.JWTMiddleware(user.CreateAgentHandler))
+	http.HandleFunc("/api/create-call", auth.JWTMiddleware(user.CreateCallHandler))
+	http.HandleFunc("/api/protected", auth.JWTMiddleware(protectedHandler))
 
 	log.Println("callcenter service started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

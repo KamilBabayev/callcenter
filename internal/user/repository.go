@@ -4,12 +4,6 @@ import (
 	"database/sql"
 )
 
-// InsertUser inserts a new user into the database
-func InsertUser(db *sql.DB, username, hashedPassword string) error {
-	_, err := db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, hashedPassword)
-	return err
-}
-
 // GetAgents retrieves all agents from the database
 func GetAgents(db *sql.DB) ([]Agent, error) {
 	rows, err := db.Query("SELECT id, name, status FROM agents")
@@ -46,4 +40,22 @@ func GetCalls(db *sql.DB) ([]Call, error) {
 		calls = append(calls, call)
 	}
 	return calls, nil
+}
+
+// CreateUser inserts a new user into the database
+func CreateUser(db *sql.DB, username, hashedPassword string) error {
+	_, err := db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, hashedPassword)
+	return err
+}
+
+// CreateAgent inserts a new agent into the database
+func CreateAgent(db *sql.DB, name, status string) error {
+	_, err := db.Exec("INSERT INTO agents (name, status) VALUES ($1, $2)", name, status)
+	return err
+}
+
+// CreateCall inserts a new call into the database
+func CreateCall(db *sql.DB, caller string, agentID int, status string) error {
+	_, err := db.Exec("INSERT INTO calls (caller, agent_id, status) VALUES ($1, $2, $3)", caller, agentID, status)
+	return err
 }
