@@ -5,6 +5,7 @@ import (
 	"callcenter/internal/db"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -96,7 +97,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer database.Close()
 
 	var storedHashedPassword string
-	err = database.QueryRow("SELECT password FROM users WHERE username=$1", loginUser.Username).Scan(&storedHashedPassword)
+	var userRole string
+	err = database.QueryRow("SELECT password, role FROM users WHERE username=$1", loginUser.Username).Scan(&storedHashedPassword, &userRole)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
@@ -111,9 +113,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create JWT token
+	// Create JWT token with role
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": loginUser.Username,
+		"role":     userRole,
 		"exp":      time.Now().Add(time.Hour * 72).Unix(),
 	})
 	tokenString, err := token.SignedString(auth.JwtKey)
@@ -121,6 +124,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
 	}
+
+	log.Println(userRole)
+	log.Println(storedHashedPassword)
+	log.Println(loginUser.Username)
+	log.Println(loginUser.Password)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
