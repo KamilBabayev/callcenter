@@ -14,6 +14,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var ValidRoles = map[string]bool{
+	"admin":  true,
+	"viewer": true,
+	"agent":  true,
+}
+
+func AllowedRolesString() string {
+	roles := make([]string, 0, len(ValidRoles))
+	for role := range ValidRoles {
+		roles = append(roles, role)
+	}
+	return strings.Join(roles, ", ")
+}
+
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -71,6 +85,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	role := newUser.Role
 	if role == "" {
 		role = "viewer"
+	}
+	if !ValidRoles[role] {
+		http.Error(w, "Invalid role. Allowed roles are: "+AllowedRolesString(), http.StatusBadRequest)
+		// http.Error(w, "Invalid role, must be one of: admin, viewer, agent", http.StatusBadRequest)
+		return
 	}
 	if err := CreateUser(database, newUser.Username, string(hashedPassword), role); err != nil {
 		http.Error(w, "Error saving user", http.StatusInternalServerError)
