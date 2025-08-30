@@ -59,3 +59,12 @@ func CreateCall(db *sql.DB, caller string, agentID int, status string) error {
 	_, err := db.Exec("INSERT INTO calls (caller, agent_id, status) VALUES ($1, $2, $3)", caller, agentID, status)
 	return err
 }
+
+// CreateUserByAdmin inserts a new user into the database with all fields (admin only)
+func CreateUserByAdmin(db *sql.DB, username, hashedPassword, role string, isAgent bool, status string) error {
+	_, err := db.Exec(
+		"INSERT INTO users (username, password, role, is_agent, status) VALUES ($1, $2, $3, $4, $5)",
+		username, hashedPassword, role, isAgent, status,
+	)
+	return err
+}
