@@ -34,7 +34,7 @@ func GetCalls(db *sql.DB) ([]Call, error) {
 	var calls []Call
 	for rows.Next() {
 		var call Call
-		if err := rows.Scan(&call.ID, &call.Caller, &call.AgentID, &call.Status, &call.Timestamp); err != nil {
+		if err := rows.Scan(&call.ID, &call.Caller, &call.UserID, &call.Status, &call.Timestamp); err != nil {
 			return nil, err
 		}
 		calls = append(calls, call)

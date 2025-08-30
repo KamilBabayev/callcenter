@@ -13,7 +13,7 @@ import (
 func main() {
 	// Endpoints for admin, agent, and viewer
 	http.HandleFunc("/api/profile", auth.JWTMiddleware(auth.RequireRoles([]string{"admin", "agent", "viewer"}, user.ProfileHandler)))
-	http.HandleFunc("/api/login", user.LoginHandler) // Usually open to all
+	http.HandleFunc("/api/login", user.LoginHandler)       // Usually open to all
 	http.HandleFunc("/api/register", user.RegisterHandler) // Usually open to all
 
 	// Endpoints for admin and agent
@@ -21,6 +21,7 @@ func main() {
 
 	// Endpoints for admin only
 	http.HandleFunc("/api/agents", auth.JWTMiddleware(auth.RequireRole("admin", user.AgentHandler)))
+	http.HandleFunc("/api/users", auth.JWTMiddleware(auth.RequireRole("admin", user.ListUsersHandler)))
 	http.HandleFunc("/api/create-agent", auth.JWTMiddleware(auth.RequireRole("admin", user.CreateAgentHandler)))
 	http.HandleFunc("/api/create-call", auth.JWTMiddleware(auth.RequireRole("admin", user.CreateCallHandler)))
 	http.HandleFunc("/api/update-agent-status", auth.JWTMiddleware(auth.RequireRole("admin", agent.UpdateStatusHandler)))

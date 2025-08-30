@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS calls (
     id SERIAL PRIMARY KEY,
     caller VARCHAR(100) NOT NULL,
-    agent_id INTEGER REFERENCES agents(id),
+    user_id INTEGER REFERENCES users(id),
     status VARCHAR(50) NOT NULL,
     timestamp TIMESTAMP NOT NULL DEFAULT NOW()
 );

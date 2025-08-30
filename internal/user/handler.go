@@ -152,7 +152,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
-	}	
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
@@ -195,7 +195,7 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	defer database.Close()
 
 	var user User
-	err = database.QueryRow("SELECT id, username FROM users WHERE username=$1", username).Scan(&user.ID, &user.Username)
+	err = database.QueryRow("SELECT id, username, role, is_agent, status FROM users WHERE username=$1", username).Scan(&user.ID, &user.Username, &user.Role, &user.IsAgent, &user.Status)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
@@ -300,7 +300,7 @@ func CreateCallHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Caller must be at least 3 characters", http.StatusBadRequest)
 		return
 	}
-	if call.AgentID <= 0 {
+	if call.UserID <= 0 {
 		http.Error(w, "Valid agent_id is required", http.StatusBadRequest)
 		return
 	}
@@ -316,11 +316,75 @@ func CreateCallHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer database.Close()
 
-	if err := CreateCall(database, call.Caller, call.AgentID, call.Status); err != nil {
+	if err := CreateCall(database, call.Caller, call.UserID, call.Status); err != nil {
 		http.Error(w, "Error creating call", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("Call created successfully!\n"))
+}
+
+// ListUsersHandler returns all users (admin only)
+func ListUsersHandler(w http.ResponseWriter, r *http.Request) {
+	// Only allow GET
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract JWT token from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return auth.JwtKey, nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	role, ok := claims["role"].(string)
+	if !ok || role != "admin" {
+		http.Error(w, "Forbidden: admin only", http.StatusForbidden)
+		return
+	}
+
+	database, err := db.Connect()
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+	defer database.Close()
+
+	rows, err := database.Query("SELECT id, username, role, is_agent, status FROM users")
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.IsAgent, &u.Status)
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		users = append(users, u)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
 }

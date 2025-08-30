@@ -5,6 +5,8 @@ type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
+	IsAgent  bool   `json:"is_agent"`
+	Status   string `json:"status"`
 }
 
 type Agent struct {
@@ -17,7 +19,7 @@ type Agent struct {
 type Call struct {
 	ID        int    `json:"id"`
 	Caller    string `json:"caller"`
-	AgentID   int    `json:"agent_id"`
+	UserID    int    `json:"user_id"`
 	Status    string `json:"status"`
 	Timestamp string `json:"timestamp"`
 }
