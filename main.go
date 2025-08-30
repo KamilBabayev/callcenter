@@ -27,6 +27,7 @@ func main() {
 	r.HandleFunc("/api/agents", auth.JWTMiddleware(auth.RequireRole("admin", user.AgentHandler)))
 	r.HandleFunc("/api/users", auth.JWTMiddleware(auth.RequireRole("admin", user.UsersHandler))).Methods("GET", "POST")
 	r.HandleFunc("/api/users/{username}", auth.JWTMiddleware(auth.RequireRole("admin", user.AdminDeleteUserHandler))).Methods("DELETE")
+	r.HandleFunc("/api/users/{username}", auth.JWTMiddleware(auth.RequireRole("admin", user.AdminUpdateUserHandler))).Methods("PUT")
 	r.HandleFunc("/api/create-agent", auth.JWTMiddleware(auth.RequireRole("admin", user.CreateAgentHandler)))
 	r.HandleFunc("/api/create-call", auth.JWTMiddleware(auth.RequireRole("admin", user.CreateCallHandler)))
 	r.HandleFunc("/api/update-agent-status", auth.JWTMiddleware(auth.RequireRole("admin", agent.UpdateStatusHandler)))
